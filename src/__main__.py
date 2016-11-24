@@ -23,7 +23,7 @@ def parse_page(page, flags = 0):
     single_season       = (flags & 1) != 0
     no_episodes_heading = (flags & 2) != 0
     in_h2, in_h3, in_tr, in_td = False, False, False, False
-    have_episodes, colspan, ignore = no_episodes_heading, None, False
+    have_episodes, colspan, ignore = no_episodes_heading, None, None
     ignore_table = False
     rows, columns, text = [], None, ''
     seasons = []
@@ -58,8 +58,16 @@ def parse_page(page, flags = 0):
                     text = ''
                 elif len(text) > 0:
                     columns.append(text[1:])
+            elif elem.name == ignore:
+                ignore = None
             elif elem.name == 'sup':
-                ignore = elem.type == util.NODE_OPEN and elem['class'] == 'reference'
+                cls = elem['class']
+                if elem.type == util.NODE_OPEN and cls is not None and 'reference' in cls.split(' '):
+                    ignore = 'sup'
+            elif elem.name == 'span':
+                cls = elem['class']
+                if elem.type == util.NODE_OPEN and cls is not None and 'sortkey' in cls.split(' '):
+                    ignore = 'span'
         elif ignore_table:
             pass
         elif in_h2:
@@ -69,10 +77,10 @@ def parse_page(page, flags = 0):
                     rows = []
                     seasons.append(('1', rows))
         elif in_h3:
-            if elem.lower().startswith('season ') or elem.startswith('series '):
+            if elem.lower().startswith('season ') or elem.startswith('series ') and elem.split(' ')[1][:1] in '0123456789':
                 rows = []
                 seasons.append((elem.replace(':', ' ').split(' ')[1], rows))
-        elif not ignore and in_td and have_episodes and colspan in (None, '1'):
+        elif ignore is None and in_td and have_episodes and colspan in (None, '1'):
             elem = elem.replace('\u200a', '')
             text += ' ' + elem
     if len(seasons) == 1 and len(seasons[0][1]) == 0:
@@ -119,6 +127,8 @@ def parse_human_date(human):
         field = field[:3].lower()
         if m is None and field in MONTHS:
             m = MONTHS.index(field) + 1
+    if y is None and m is None and d is None:
+        return 'Unaired\t'
     y = str(y)
     m = '..' if m is None else ('%02i' % m)
     d = '..' if d is None else ('%02i' % d)
@@ -199,6 +209,8 @@ for season, episodes in seasons:
                     q = i
             if q is not None:
                 title = (title[1:q] + title[q + 1:]).strip()
+            if '"/"' in title:
+                title = title.replace('"/"', '" "')
             if '" "' in title:
                 title = ' '.join(('%s' if i == 0 else '(A.K.A %s)') % t for i, t in enumerate(title.split('" "')))
         if title is not None:
