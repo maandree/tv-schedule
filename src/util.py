@@ -4,7 +4,7 @@ from subprocess import Popen, PIPE
 
 NODE_OPEN = 0
 NODE_SELF_CLOSING = 1
-NODE_CLOSING = 2
+NODE_CLOSE = 2
 
 def get(url):
     proc = Popen(['curl', url], stdout = PIPE, stderr = sys.stderr)
@@ -18,6 +18,13 @@ class Node:
         self.type = type
     def __getitem__(self, key):
         return self.attrs[key] if key in self.attrs else None
+    def __repr__(self):
+        a = '/' if self.type == NODE_CLOSE else ''
+        c = '/' if self.type == NODE_SELF_CLOSING else ''
+        b = ''
+        for key in self.attrs:
+            b += ' %s="%s"' % (key, self.attrs[key])
+        return '<%s%s%s%s>' % (a, self.name, b, c)
 
 def parse_xml(text, with_nbsp = False):
     entities = {
@@ -126,7 +133,7 @@ def parse_xml(text, with_nbsp = False):
             if quote is None and c == '>':
                 typ = NODE_OPEN
                 if buf.startswith('/'):
-                    typ = NODE_CLOSING
+                    typ = NODE_CLOSE
                     buf = buf[1:]
                 elif buf.endswith('/'):
                     typ = NODE_SELF_CLOSING
