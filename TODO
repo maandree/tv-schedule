@@ -1,19 +1,13 @@
-$#*! My Dad Says
-A Bit of Fry & Laurie
+$h*! My Dad Says
+A Bit of Fry & Laurie --------------------- require entirely new parser
 Adventures of Sonic the Hedgehog
 Afterlife
 Awake
 Balls of Steel
 Balls of Steel Australia
-Bar Karma
 Black Books
 Blackadder
-Breaking In
-CHAOS
-Carnivàle
-Chappelle's Show
-Chip 'n Dale Rescue Rangers
-Darkwing Duck
+Darkwing Duck ----------------------------- very special case
 Dead Boss
 Demons
 Dexter's Laboratory
@@ -21,7 +15,7 @@ Discworld
 Disney's Adventures of the Gummi Bears
 Doctor Who
 Eleventh Hour [2008]
-Friends
+Friends ----------------------------------- lists are in separate articles
 Futurama
 Green Wing
 Heroes
@@ -51,7 +45,6 @@ TaleSpin
 The Adventures of Tintin
 The Almighty Johnsons
 The Crimson Ghost
-The Crimson Ghost
 The League of Gentlemen
 The Lone Gunmen
 The River [2012]
@@ -68,5 +61,6 @@ Wacky Races
 Witchblade
 https://en.wikipedia.org/wiki/The_Newsroom_(Canadian_TV_series)
 
+Add support for CDATA
 Add support for specials
 Add support for other languages on Wikipedia

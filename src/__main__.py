@@ -11,9 +11,12 @@ url = ' '.join(sys.argv[1:])
 if url.startswith('https://') or url.startswith('http://'):
     urls = [url]
 else:
-    url = url.replace(' ', '_').replace('[', '(').replace(']', ')')
+    url = url.replace(' ', '_')
+    for c in '%#?&': ## % first
+        url = url.replace(c, ''.join('%%%02X' % b for b in c.encode('utf-8')))
     urls = ['https://en.wikipedia.org/wiki/List_of_%s_episodes',
-            'https://en.wikipedia.org/wiki/%s']
+            'https://en.wikipedia.org/wiki/%s',
+            'https://en.wikipedia.org/wiki/%s_(TV_series)']
     urls = [u % url for u in urls]
 
 def parse_page(page, flags = 0):
@@ -21,11 +24,19 @@ def parse_page(page, flags = 0):
     no_episodes_heading = (flags & 2) != 0
     in_h2, in_h3, in_tr, in_td = False, False, False, False
     have_episodes, colspan, ignore = no_episodes_heading, None, False
+    ignore_table = False
     rows, columns, text = [], None, ''
     seasons = []
     for elem in page:
         if isinstance(elem, util.Node):
-            if not no_episodes_heading and elem.name == 'h2':
+            if elem.name == 'table':
+                if elem.type == util.NODE_OPEN:
+                    ignore_table = elem['class'] == 'cquote'
+                else:
+                    ignore_table = False
+            elif ignore_table:
+                pass
+            elif not no_episodes_heading and elem.name == 'h2':
                 in_h2 = elem.type == util.NODE_OPEN
                 if in_h2:
                     if have_episodes:
@@ -49,6 +60,8 @@ def parse_page(page, flags = 0):
                     columns.append(text[1:])
             elif elem.name == 'sup':
                 ignore = elem.type == util.NODE_OPEN and elem['class'] == 'reference'
+        elif ignore_table:
+            pass
         elif in_h2:
             if elem.lower() in ('episodes', 'episode list', 'episode guide', 'seasons', 'season list'):
                 have_episodes = True
@@ -59,9 +72,11 @@ def parse_page(page, flags = 0):
             if elem.lower().startswith('season ') or elem.startswith('series '):
                 rows = []
                 seasons.append((elem.replace(':', ' ').split(' ')[1], rows))
-        elif not ignore and in_td and have_episodes and colspan in (None, "1"):
+        elif not ignore and in_td and have_episodes and colspan in (None, '1'):
             elem = elem.replace('\u200a', '')
             text += ' ' + elem
+    if len(seasons) == 1 and len(seasons[0][1]) == 0:
+        return []
     return seasons
 
 seasons = []
@@ -86,25 +101,41 @@ MONTHS = ('jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 
 def parse_human_date(human):
     if human in ('TBA', 'TBD'):
         return '....-..-..'
-    human = human.replace(',', ' ').replace('  ', ' ').split(' ')
+    human = human.replace(',', ' ').replace('–', ' ').replace('-', ' ').split(' ')
     y, m, d = None, None, None
     for field in human:
         try:
-            if len(field) >= 4:
+            if y is None and len(field) >= 4:
                 y = int(field, 10)
                 continue
         except:
             pass
         try:
-            d = int(field, 10)
-            continue
+            if d is None:
+                d = int(field, 10)
+                continue
         except:
             pass
-        m = MONTHS.index(field[:3].lower()) + 1
+        field = field[:3].lower()
+        if m is None and field in MONTHS:
+            m = MONTHS.index(field) + 1
     y = str(y)
     m = '..' if m is None else ('%02i' % m)
     d = '..' if d is None else ('%02i' % d)
     return '%s-%s-%s' % (y, m, d)
+
+def parse_date(date):
+    if '( ' in date:
+        date = date.split('( ')[1].split(' )')[0].strip()
+    elif '.' in date:
+        date = date.split('.')
+        date[1], date[2] = date[2], date[1]
+        date = '-'.join(date)
+    else:
+        date = parse_human_date(date)
+    if '-' not in date:
+        date = parse_human_date(date)
+    return date
 
 def index_any(list, *keys):
     for key in keys:
@@ -112,7 +143,7 @@ def index_any(list, *keys):
             return titles.index(key)
     return titles.index(keys[0])
 
-alphabet = 'abcdefghijklmnopqrstuvwxyz'
+jointno = None
 for season, episodes in seasons:
     if len(episodes) == 0:
         continue
@@ -126,15 +157,24 @@ for season, episodes in seasons:
         return ''.join(w for w in t.split(' ') if w not in ignored).split('[')[0]
     titles = [simplify(t) for t in episodes[0]]
     episodes = episodes[1:]
-    col_episode = index_any(titles, 'noinseason', 'noinseries', 'ep', 'episodeno', 'no', 'releaseorder')
-    col_title = titles.index('title')
+    col_episode = index_any(titles, 'noinseason', 'noinseries', 'episode', 'ep', 'episodeno', 'no', 'releaseorder')
+    try:
+        col_title = titles.index('title')
+    except:
+        col_title = None
     col_air = index_any(titles, 'airdate', 'releasedate')
     def parse_episode_no(num):
+        global jointno, season
         try:
             alpha = ''
-            if num[-1] in alphabet:
+            if num[-1] in 'abcdefghijklmnopqrstuvwxyz':
                 num, alpha = num[:-1], num[-1]
-            return (int(num, 10), alpha)
+            num = int(num, 10)
+            if jointno is None:
+                jointno = num >= 100
+            if jointno:
+                season, num = num // 100, num % 100
+            return (num, alpha)
         except: # See https://en.wikipedia.org/wiki/List_of_Everybody_Loves_Raymond_episodes between S06E20 and S06E21
             return None # extra
     for cols in episodes:
@@ -150,19 +190,9 @@ for season, episodes in seasons:
             e = parse_episode_no(e)
             episodes.append('xx' if e is None else ('%02i%s' % e))
         episode = '-'.join(episodes)
-        title = cols[col_title].strip()
-        air = cols[col_air]
-        if '(' in air:
-            air = air.split('(')[1].split(')')[0].strip()
-        elif '.' in air:
-            air = air.split('.')
-            air[1], air[2] = air[2], air[1]
-            air = '-'.join(air)
-        else:
-            air = parse_human_date(air)
-        if '-' not in air:
-            air = parse_human_date(air)
-        if title.startswith('"'):
+        title = cols[col_title].strip() if col_title is not None else None
+        air = parse_date(cols[col_air])
+        if title is not None and title.startswith('"'):
             q = None
             for i, c in enumerate(title):
                 if c == '"':
@@ -171,4 +201,7 @@ for season, episodes in seasons:
                 title = (title[1:q] + title[q + 1:]).strip()
             if '" "' in title:
                 title = ' '.join(('%s' if i == 0 else '(A.K.A %s)') % t for i, t in enumerate(title.split('" "')))
-        print('%s\tS%02iE%s - %s' % (air, season, episode, title.replace('  ', ' ')))
+        if title is not None:
+            print('%s\tS%02iE%s - %s' % (air, season, episode, title.replace('  ', ' ')))
+        else:
+            print('%s\tS%02iE%s' % (air, season, episode))
