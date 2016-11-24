@@ -38,9 +38,8 @@ def parse_page(page, flags = 0):
                 pass
             elif not no_episodes_heading and elem.name == 'h2':
                 in_h2 = elem.type == util.NODE_OPEN
-                if in_h2:
-                    if have_episodes:
-                        break
+                if in_h2 and have_episodes:
+                    break
             elif elem.name == ('h2' if no_episodes_heading else 'h3'):
                 in_h3 = elem.type == util.NODE_OPEN
                 if in_h3:
@@ -77,7 +76,7 @@ def parse_page(page, flags = 0):
                     rows = []
                     seasons.append(('1', rows))
         elif in_h3:
-            if elem.lower().startswith('season ') or elem.startswith('series ') and elem.split(' ')[1][:1] in '0123456789':
+            if elem.lower().split(' ')[0] in ('season', 'series') and elem.split(' ')[1][:1] in '0123456789':
                 rows = []
                 seasons.append((elem.replace(':', ' ').split(' ')[1], rows))
         elif ignore is None and in_td and have_episodes and colspan in (None, '1'):
@@ -169,7 +168,7 @@ for season, episodes in seasons:
     episodes = episodes[1:]
     col_episode = index_any(titles, 'noinseason', 'noinseries', 'episode', 'ep', 'episodeno', 'no', 'releaseorder')
     try:
-        col_title = titles.index('title')
+        col_title = index_any(titles, 'title', 'episodetitle', 'eptitle')
     except:
         col_title = None
     col_air = index_any(titles, 'airdate', 'releasedate')
@@ -179,6 +178,10 @@ for season, episodes in seasons:
             alpha = ''
             if num[-1] in 'abcdefghijklmnopqrstuvwxyz':
                 num, alpha = num[:-1], num[-1]
+            if '.' in num:
+                jointno = False
+                (season, num) = num.split('.')
+                season = int(season, 10)
             num = int(num, 10)
             if jointno is None:
                 jointno = num >= 100
