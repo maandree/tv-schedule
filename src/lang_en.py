@@ -1,19 +1,20 @@
 import sys
 import util
 
-def LangEN(show):
-    if show.startswith('https://') or show.startswith('http://'):
-        urls = [show]
-    else:
-        url = show.replace(' ', '_')
-        for c in '%#?&': ## % first
-            url = url.replace(c, ''.join('%%%02X' % b for b in c.encode('utf-8')))
-        urls = ['https://en.wikipedia.org/wiki/List_of_%s_episodes',
-                'https://en.wikipedia.org/wiki/%s',
-                'https://en.wikipedia.org/wiki/%s_(TV_series)']
-        urls = [u % url for u in urls]
+class Parser:
+    def __init__(self):
+        self.MONTHS = ('jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec')
     
-    def parse_page(page, flags = 0):
+    def is_episode_section(self, elem):
+        return elem.lower() in ('episodes', 'episode list', 'episode guide', 'seasons', 'season list')
+    
+    def is_season_section(self, elem):
+        return elem.lower().split(' ')[0] in ('season', 'series') and elem.split(' ')[1][:1] in '0123456789'
+    
+    def parse_season(self, elem):
+        return int(elem.replace(':', ' ').split(' ')[1], 10)
+    
+    def parse_page(self, page, flags = 0):
         single_season       = (flags & 1) != 0
         no_episodes_heading = (flags & 2) != 0
         in_h2, in_h3, in_tr, in_td = False, False, False, False
@@ -64,15 +65,15 @@ def LangEN(show):
             elif ignore_table:
                 pass
             elif in_h2:
-                if elem.lower() in ('episodes', 'episode list', 'episode guide', 'seasons', 'season list'):
+                if self.is_episode_section(elem):
                     have_episodes = True
                     if single_season:
                         rows = []
-                        seasons.append(('1', rows))
+                        seasons.append((1, rows))
             elif in_h3:
-                if elem.lower().split(' ')[0] in ('season', 'series') and elem.split(' ')[1][:1] in '0123456789':
+                if self.is_season_section(elem):
                     rows = []
-                    seasons.append((elem.replace(':', ' ').split(' ')[1], rows))
+                    seasons.append((self.parse_season(elem), rows))
             elif ignore is None and in_td and have_episodes and colspan in (None, '1'):
                 elem = elem.replace('\u200a', '')
                 text += ' ' + elem
@@ -80,26 +81,7 @@ def LangEN(show):
             return []
         return seasons
     
-    seasons = []
-    for url in urls:
-        page = util.get(url)
-        try:
-            page = util.parse_xml(page)
-            for flags in range(1 << 2):
-                seasons = parse_page(page, flags)
-                if len(seasons) > 0:
-                    break
-            if len(seasons) > 0:
-                break
-        except:
-            pass
-    if len(seasons) == 0:
-        print('%s: don\'t know how to parse' % sys.argv[0], file = sys.stderr)
-        sys.exit(1)
-    
-    MONTHS = ('jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec')
-    
-    def parse_human_date(human):
+    def parse_human_date(self, human):
         if human in ('TBA', 'TBD'):
             return '....-..-..'
         human = human.replace(',', ' ').replace('–', ' ').replace('-', ' ').split(' ')
@@ -118,8 +100,8 @@ def LangEN(show):
             except:
                 pass
             field = field[:3].lower()
-            if m is None and field in MONTHS:
-                m = MONTHS.index(field) + 1
+            if m is None and field in self.MONTHS:
+                m = self.MONTHS.index(field) + 1
         if y is None and m is None and d is None:
             return 'Unaired\t'
         y = str(y)
@@ -127,90 +109,130 @@ def LangEN(show):
         d = '..' if d is None else ('%02i' % d)
         return '%s-%s-%s' % (y, m, d)
     
-    def parse_date(date):
+    def parse_date(self, date):
         if '( ' in date:
             date = date.split('( ')[1].split(' )')[0].strip()
+            date = date.split('T')[0] # See https://en.wikipedia.org/wiki/List_of_Shameless_(UK_TV_series)_episodes S10E09
         elif '.' in date:
             date = date.split('.')
             date[1], date[2] = date[2], date[1]
             date = '-'.join(date)
         else:
-            date = parse_human_date(date)
+            date = self.parse_human_date(date)
         if '-' not in date:
-            date = parse_human_date(date)
+            date = self.parse_human_date(date)
         return date
     
-    jointno = None
-    found_something = False
-    for season, episodes in seasons:
-        if len(episodes) == 0:
-            continue
+    def parse_episode_no(self, num):
         try:
-            season = int(season)
-        except:
-            continue
-        def simplify(t):
-            t = t.replace('#', 'no').lower().replace('º', 'o').replace('.', '')
-            ignored = ('original', 'us', 'uk')
-            return ''.join(w for w in t.split(' ') if w not in ignored).split('[')[0]
-        titles = [simplify(t) for t in episodes[0]]
-        episodes = episodes[1:]
-        col_episode = util.index_any(titles, 'noinseason', 'noinseries', 'episode', 'ep', 'episodeno', 'no', 'releaseorder')
-        try:
-            col_title = util.index_any(titles, 'title', 'episodetitle', 'eptitle')
-        except:
-            col_title = None
-        col_air = util.index_any(titles, 'airdate', 'releasedate')
-        def parse_episode_no(num):
-            nonlocal jointno, season
-            try:
-                alpha = ''
-                if num[-1] in 'abcdefghijklmnopqrstuvwxyz':
-                    num, alpha = num[:-1], num[-1]
-                if '.' in num:
-                    jointno = False
-                    (season, num) = num.split('.')
-                    season = int(season, 10)
-                num = int(num, 10)
-                if jointno is None:
-                    jointno = num >= 100
-                if jointno:
-                    season, num = num // 100, num % 100
-                return (num, alpha)
-            except: # See https://en.wikipedia.org/wiki/List_of_Everybody_Loves_Raymond_episodes between S06E20 and S06E21
-                return None # extra
-        for cols in episodes:
-            episode = cols[col_episode]
-            if '(' in episode:
-                episode = episode.split('(')[1].split(')')[0]
-            for c in '–-/':
-                episode = episode.replace(c, ' ')
-            episodes = []
-            for e in episode.split(' '):
-                if e == '':
-                    continue
-                e = parse_episode_no(e)
-                episodes.append('xx' if e is None else ('%02i%s' % e))
-            episode = '-'.join(episodes)
-            title = cols[col_title].strip() if col_title is not None else None
-            air = parse_date(cols[col_air])
-            if title is not None and title.startswith('"'):
-                q = None
-                for i, c in enumerate(title):
-                    if c == '"':
-                        q = i
-                if q is not None:
-                    title = (title[1:q] + title[q + 1:]).strip()
-                if '"/"' in title:
-                    title = title.replace('"/"', '" "')
-                if '" "' in title:
-                    title = ' '.join(('%s' if i == 0 else '(A.K.A %s)') % t for i, t in enumerate(title.split('" "')))
-            if title is not None:
-                print('%s\tS%02iE%s - %s' % (air, season, episode, title.replace('  ', ' ')))
-            else:
-                print('%s\tS%02iE%s' % (air, season, episode))
-            found_something = True
+            alpha = ''
+            if num[-1] in 'abcdefghijklmnopqrstuvwxyz':
+                num, alpha = num[:-1], num[-1]
+            if '.' in num:
+                self.jointno = False
+                (self.season, num) = num.split('.')
+                self.season = int(self.season, 10)
+            num = int(num, 10)
+            if self.jointno is None:
+                self.jointno = num >= 100
+            if self.jointno:
+                self.season, num = num // 100, num % 100
+            return (num, alpha)
+        except: # See https://en.wikipedia.org/wiki/List_of_Everybody_Loves_Raymond_episodes between S06E20 and S06E21
+            return None # extra
     
-    if not found_something:
+    def get_episode_column(self, columns):
+        return util.index_any(columns, 'noinseason', 'noinseries', 'episode', 'ep', 'episodeno', 'no', 'releaseorder')
+    
+    def get_title_column(self, columns):
+        try:
+            return util.index_any(columns, 'title', 'episodetitle', 'eptitle')
+        except:
+            return None
+    
+    def get_date_column(self, columns):
+        return util.index_any(columns, 'airdate', 'releasedate')
+    
+    def parse_title(self, title):
+        title = title.strip()
+        if title.startswith('"'):
+            q = None
+            for i, c in enumerate(title):
+                if c == '"':
+                    q = i
+            if q is not None:
+                title = (title[1:q] + title[q + 1:]).strip()
+            if '"/"' in title:
+                title = title.replace('"/"', '" "')
+            if '" "' in title:
+                title = ' '.join(('%s' if i == 0 else '(A.K.A %s)') % t for i, t in enumerate(title.split('" "')))
+        return title.replace('  ', ' ')
+    
+    def parse_episode(self, episode):
+        if '(' in episode:
+            episode = episode.split('(')[1].split(')')[0]
+        for c in '–-/':
+            episode = episode.replace(c, ' ')
+        episodes = []
+        for e in episode.split(' '):
+            if e == '':
+                continue
+            e = self.parse_episode_no(e)
+            episodes.append('xx' if e is None else ('%02i%s' % e))
+        return episodes
+    
+    def simplify_column(self, column):
+        column = column.replace('#', 'no').lower().replace('º', 'o').replace('.', '')
+        ignored = ('original', 'us', 'uk')
+        return ''.join(w for w in column.split(' ') if w not in ignored).split('[')[0]
+    
+    def parse_table(self, seasons):
+        self.jointno = None
+        found = []
+        for self.season, episodes in seasons:
+            if len(episodes) == 0:
+                continue
+            columns, episodes = [self.simplify_column(t) for t in episodes[0]], episodes[1:]
+            col_episode = self.get_episode_column(columns)
+            col_title = self.get_title_column(columns)
+            col_date = self.get_date_column(columns)
+            for cols in episodes:
+                episode = '-'.join(self.parse_episode(cols[col_episode]))
+                title = self.parse_title(cols[col_title]) if col_title is not None else None
+                date = self.parse_date(cols[col_date])
+                if title is not None:
+                    found.append('%s\tS%02iE%s - %s' % (date, self.season, episode, title))
+                else:
+                    found.append('%s\tS%02iE%s' % (date, self.season, episode))
+        return found
+    
+    def parse(self, urls):
+        for url in urls:
+            page = util.get(url)
+            try:
+                page = util.parse_xml(page)
+                for flags in range(1 << 2):
+                    episodes = self.parse_table(self.parse_page(page, flags))
+                    if len(episodes) > 0:
+                        for episode in episodes:
+                            print(episode)
+                        return True
+            except:
+                pass
+        return False
+
+def parse(show):
+    if show.startswith('https://') or show.startswith('http://'):
+        urls = [show]
+    else:
+        url = show.replace(' ', '_')
+        for c in '%#?&': ## % first
+            url = url.replace(c, ''.join('%%%02X' % b for b in c.encode('utf-8')))
+        urls = ['https://en.wikipedia.org/wiki/List_of_%s_episodes',
+                'https://en.wikipedia.org/wiki/%s',
+                'https://en.wikipedia.org/wiki/%s_(TV_series)']
+        urls = [u % url for u in urls]
+    
+    if not Parser().parse(urls):
         print('%s: don\'t know how to parse' % sys.argv[0], file = sys.stderr)
         sys.exit(1)

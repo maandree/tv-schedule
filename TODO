@@ -1,13 +1,15 @@
 A Bit of Fry & Laurie --------------------- require entirely new parser
 Awake
+Baby Looney Tunes
 Balls of Steel
 Balls of Steel Australia
 Black Books
 Blackadder
-Darkwing Duck ----------------------------- very special case
+Darkwing Duck ----------------------------- quirk: season number
 Dexter's Laboratory
 Disney's Adventures of the Gummi Bears
 Doctor Who
+Duck Dodgers ------------------------------ "season one", "season two", … + quirk: overall-only episode number only
 Friends
 Green Wing -------------------------------- each season have their own article
 Heroes
@@ -21,6 +23,8 @@ Lost Worlds
 Married... with Childred
 Masters of Science Fiction
 Mr. Bean
+My Little Pony
+Ninja Turtles: The Next Mutation
 Psychoville
 Quark
 Seven Days
@@ -28,15 +32,20 @@ Shameless (UK TV series)
 Sherlock
 Silent Witness
 TaleSpin
+Teenage Mutant Ninja Turtles (1987 TV series)
+Teenage Mutant Ninja Turtles (2003 TV series)
+Teenage Mutant Ninja Turtles (2012 TV series)
 The Adventures of Tintin
 The Crimson Ghost
 The Lone Gunmen
 The Newsroom (Canadian TV series)
+The Plucky Duck Show ---------------------- quirk: episode title
 The River (UK TV series)
 The Shield
 The Wrong Door
-Twin Peaks
+Tiny Toon Adventures
 Two Guys, a Girl and a Pizza Place
-Wacky Races
+Wabbit (TV series)
+Wacky Races ------------------------------- quirk: episode number
 
 Add support for specials

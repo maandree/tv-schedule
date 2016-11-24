@@ -48,7 +48,7 @@ if lang is None:
 
 if lang == 'en':
     import lang_en
-    lang_en.LangEN(show)
+    lang_en.parse(show)
 else:
     print('%s: unsupported language: %s' % (sys.argv[0], lang), file = sys.stderr)
     sys.exit(1)
