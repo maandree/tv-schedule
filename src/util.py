@@ -125,12 +125,21 @@ def parse_xml(text, with_nbsp = False):
             buf = buf.replace(' ', ' ')
         return buf
     ret = []
-    buf = ''
-    quote = None
-    lt = False
+    buf, quote, lt, cdata = '', None, False, None
     for c in text:
         if lt:
-            if quote is None and c == '>':
+            if cdata is not None:
+                buf += c
+                if len(cdata) > 0:
+                    if c == cdata[0]:
+                        cdata = cdata[1:]
+                    else:
+                        cdata = None
+                elif buf.endswith(']]>'):
+                    ret.append(buf[len('![CDATA[') : -3])
+                    lt, buf, cdata = False, '', None
+            elif quote is None and c == '>':
+                cdata = None
                 typ = NODE_OPEN
                 if buf.startswith('/'):
                     typ = NODE_CLOSE
@@ -186,7 +195,7 @@ def parse_xml(text, with_nbsp = False):
             buf = p(buf, True)
             if not buf == '':
                 ret.append(buf)
-            lt, buf = True, ''
+            lt, buf, cdata = True, '', '![CDATA['
         else:
             buf += c
     if not lt:
