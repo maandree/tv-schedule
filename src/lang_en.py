@@ -141,6 +141,7 @@ def LangEN(show):
         return date
     
     jointno = None
+    found_something = False
     for season, episodes in seasons:
         if len(episodes) == 0:
             continue
@@ -208,3 +209,8 @@ def LangEN(show):
                 print('%s\tS%02iE%s - %s' % (air, season, episode, title.replace('  ', ' ')))
             else:
                 print('%s\tS%02iE%s' % (air, season, episode))
+            found_something = True
+    
+    if not found_something:
+        print('%s: don\'t know how to parse' % sys.argv[0], file = sys.stderr)
+        sys.exit(1)
