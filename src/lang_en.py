@@ -11,7 +11,7 @@ class Parser:
             headings = ('episodes', 'episode list', 'episode guide', 'seasons', 'season list')
         else:
             headings = ('main series', 'series overview', 'broadcast and release', 'series')
-        return elem.lower() in headings
+        return elem.lower().replace('listing', 'list') in headings
     
     def to_num(self, text):
         lower = text.lower()
