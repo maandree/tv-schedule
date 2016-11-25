@@ -4,19 +4,40 @@ import util
 class Parser:
     def __init__(self):
         self.MONTHS = ('jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec')
+        self.page_parser_flag_count = 3
     
-    def is_episode_section(self, elem):
-        return elem.lower() in ('episodes', 'episode list', 'episode guide', 'seasons', 'season list')
+    def is_episode_section(self, elem, alt_episodes_heading):
+        if not alt_episodes_heading:
+            headings = ('episodes', 'episode list', 'episode guide', 'seasons', 'season list')
+        else:
+            headings = ('main series', 'series overview', 'broadcast and release', 'series')
+        return elem.lower() in headings
+    
+    def to_num(self, text):
+        lower = text.lower()
+        nums = ('zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
+                'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen',
+                'nineteen', 'twenty')
+        if lower in nums:
+            return str(nums.index(lower))
+        if lower in ('nought', 'nil', 'null'):
+            return '0'
+        return text
     
     def is_season_section(self, elem):
-        return elem.lower().split(' ')[0] in ('season', 'series') and elem.split(' ')[1][:1] in '0123456789'
+        return \
+            elem.lower().split(' ')[0] in ('season', 'series') and \
+            self.to_num(elem.replace(':', ' ').split(' ')[1])[:1] in '0123456789'
     
     def parse_season(self, elem):
-        return int(elem.replace(':', ' ').split(' ')[1], 10)
+        return int(self.to_num(elem.replace(':', ' ').split(' ')[1]), 10)
     
     def parse_page(self, page, flags = 0):
-        single_season       = (flags & 1) != 0
-        no_episodes_heading = (flags & 2) != 0
+        single_season        = (flags & 1) != 0
+        no_episodes_heading  = (flags & 2) != 0
+        alt_episodes_heading = (flags & 4) != 0
+        if no_episodes_heading and alt_episodes_heading:
+            return []
         in_h2, in_h3, in_tr, in_td = False, False, False, False
         have_episodes, colspan, ignore = no_episodes_heading, None, None
         ignore_table = False
@@ -65,7 +86,7 @@ class Parser:
             elif ignore_table:
                 pass
             elif in_h2:
-                if self.is_episode_section(elem):
+                if self.is_episode_section(elem, alt_episodes_heading):
                     have_episodes = True
                     if single_season:
                         rows = []
@@ -82,7 +103,7 @@ class Parser:
         return seasons
     
     def parse_human_date(self, human):
-        if human in ('TBA', 'TBD'):
+        if human.lower() in ('tba', 'tbd', 'not scheduled'):
             return '....-..-..'
         human = human.replace(',', ' ').replace('–', ' ').replace('-', ' ').split(' ')
         y, m, d = None, None, None
@@ -121,6 +142,8 @@ class Parser:
             date = self.parse_human_date(date)
         if '-' not in date:
             date = self.parse_human_date(date)
+        else:
+            date = '-'.join((date + '-..-..').split('-')[:3])
         return date
     
     def parse_episode_no(self, num):
@@ -142,11 +165,12 @@ class Parser:
             return None # extra
     
     def get_episode_column(self, columns):
-        return util.index_any(columns, 'noinseason', 'noinseries', 'episode', 'ep', 'episodeno', 'no', 'releaseorder')
+        return util.index_any(columns, 'noinseason', 'noinseries', 'episode', 'ep', 'episodeno',
+                              'releaseorder', 'seasonepno', 'serial', 'no')
     
     def get_title_column(self, columns):
         try:
-            return util.index_any(columns, 'title', 'episodetitle', 'eptitle')
+            return util.index_any(columns, 'title', 'episodetitle', 'eptitle', 'cartoons')
         except:
             return None
     
@@ -169,9 +193,9 @@ class Parser:
         return title.replace('  ', ' ')
     
     def parse_episode(self, episode):
-        if '(' in episode:
+        if '(' in episode: # TODO select the lowest
             episode = episode.split('(')[1].split(')')[0]
-        for c in '–-/':
+        for c in '–-/&':
             episode = episode.replace(c, ' ')
         episodes = []
         for e in episode.split(' '):
@@ -179,12 +203,18 @@ class Parser:
                 continue
             e = self.parse_episode_no(e)
             episodes.append('xx' if e is None else ('%02i%s' % e))
+        if len(episodes) > 1:
+            episodes = [episodes[0], episodes[-1]] ## See first episode in https://en.wikipedia.org/wiki/List_of_TaleSpin_episodes
         return episodes
     
     def simplify_column(self, column):
         column = column.replace('#', 'no').lower().replace('º', 'o').replace('.', '')
         ignored = ('original', 'us', 'uk')
-        return ''.join(w for w in column.split(' ') if w not in ignored).split('[')[0]
+        def sub(w):
+            w = w.replace('name', 'title')
+            w = w.replace('number', 'no')
+            return w
+        return ''.join(sub(w) for w in column.split(' ') if w not in ignored).split('[')[0]
     
     def parse_table(self, seasons):
         self.jointno = None
@@ -211,20 +241,56 @@ class Parser:
             page = util.get(url)
             try:
                 page = util.parse_xml(page)
-                for flags in range(1 << 2):
+                for flags in range(1 << self.page_parser_flag_count):
                     episodes = self.parse_table(self.parse_page(page, flags))
                     if len(episodes) > 0:
-                        for episode in episodes:
-                            print(episode)
-                        return True
+                        return episodes
             except:
                 pass
-        return False
+        return None
+
+class Darkwing_Duck(Parser):
+    def __init__(self):
+        Parser.__init__(self)
+        self.seasons = ['disney afternoon', 'abc season 1', 'abc season 2']
+    def is_season_section(self, elem):
+        return elem.lower().split('(')[0].strip() in self.seasons
+    def parse_season(self, elem):
+        return self.seasons.index(elem.lower().split('(')[0].strip()) + 1
+
+class Wacky_Races(Parser):
+    def __init__(self):
+        Parser.__init__(self)
+    def parse_episode(self, episode):
+        if episode.startswith('WR-'):
+            episode = episode[3:]
+        return Parser.parse_episode(self, episode)
+
+class Tiny_Toon_Adventures(Parser):
+    def __init__(self):
+        Parser.__init__(self)
+        self.modify_episode = None
+    def parse_episode(self, episode):
+        episode = episode.split(' ')[0]
+        if self.modify_episode is None:
+            e = episode
+            for c in '123456789':
+                e = e.replace(c, '0')
+            self.modify_episode = e in ('0-000', '00-000')
+        if self.modify_episode:
+            episode = episode.split('-')[1]
+        return Parser.parse_episode(self, episode)
 
 def parse(show):
+    renames = {
+        'Two Guys, a Girl and a Pizza Place' : 'Two Guys and a Girl',
+    }
+    
     if show.startswith('https://') or show.startswith('http://'):
         urls = [show]
     else:
+        if show in renames:
+            show = renames[show]
         url = show.replace(' ', '_')
         for c in '%#?&': ## % first
             url = url.replace(c, ''.join('%%%02X' % b for b in c.encode('utf-8')))
@@ -233,6 +299,29 @@ def parse(show):
                 'https://en.wikipedia.org/wiki/%s_(TV_series)']
         urls = [u % url for u in urls]
     
-    if not Parser().parse(urls):
+    def is_article(show):
+        for url in urls:
+            if url.split('?')[0].split('#')[0].split('/')[-1] == show:
+                return True
+        return False
+    
+    articles = {
+        'List_of_Darkwing_Duck_episodes'        : Darkwing_Duck,
+        'Wacky_Races'                           : Wacky_Races,
+        'List_of_Tiny_Toon_Adventures_episodes' : Tiny_Toon_Adventures
+    }
+    
+    parser = None
+    for article in articles:
+        if is_article(article):
+            parser = articles[article]()
+    if parser is None:
+        parser = Parser()
+    
+    episodes = parser.parse(urls)
+    if episodes is None:
         print('%s: don\'t know how to parse' % sys.argv[0], file = sys.stderr)
         sys.exit(1)
+    else:
+        for episode in episodes:
+            print(episode)
