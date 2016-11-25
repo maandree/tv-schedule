@@ -4,13 +4,15 @@ import util
 class Parser:
     def __init__(self):
         self.MONTHS = ('jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec')
-        self.page_parser_flag_count = 3
+        self.page_parser_flag_count = 4
     
     def is_episode_section(self, elem, alt_episodes_heading):
-        if not alt_episodes_heading:
+        if alt_episodes_heading == 0:
             headings = ('episodes', 'episode list', 'episode guide', 'seasons', 'season list')
-        else:
-            headings = ('main series', 'series overview', 'broadcast and release', 'series')
+        elif alt_episodes_heading == 1:
+            headings = ('series overview', 'broadcast and release', 'series')
+        elif alt_episodes_heading == 2:
+            headings = ('main series',)
         return elem.lower().replace('listing', 'list') in headings
     
     def to_num(self, text):
@@ -33,10 +35,11 @@ class Parser:
         return int(self.to_num(elem.replace(':', ' ').split(' ')[1]), 10)
     
     def parse_page(self, page, flags = 0):
-        single_season        = (flags & 1) != 0
-        no_episodes_heading  = (flags & 2) != 0
-        alt_episodes_heading = (flags & 4) != 0
-        if no_episodes_heading and alt_episodes_heading:
+        single_season         = (flags & 1) != 0
+        no_episodes_heading   = (flags & 2) != 0
+        alt_episodes_heading  = (flags & 4) >> 2
+        alt_episodes_heading |= (flags & 8) >> 2
+        if (no_episodes_heading and alt_episodes_heading > 0) or (alt_episodes_heading > 2):
             return []
         in_h2, in_h3, in_tr, in_td = False, False, False, False
         have_episodes, colspan, ignore = no_episodes_heading, None, None
@@ -243,9 +246,12 @@ class Parser:
             try:
                 page = util.parse_xml(page)
                 for flags in flagses:
-                    episodes = self.parse_table(self.parse_page(page, flags))
-                    if len(episodes) > 0:
-                        return (url, episodes)
+                    try:
+                        episodes = self.parse_table(self.parse_page(page, flags))
+                        if len(episodes) > 0:
+                            return (url, episodes)
+                    except:
+                        pass
             except:
                 pass
         return None
