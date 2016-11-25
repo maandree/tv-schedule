@@ -12,9 +12,7 @@ Requires new parsers:
 
 Don't know why they do not work:
 	Doctor Who ------------------------------ will require quirks
-	La Femme Nikita
 	Naruto: Shippuden
-	Ninja Turtles: The Next Mutation
 	Panty & Stocking with Garterbelt -------- will require quirks
 
 Does not work because of specials/shorts/webisodes/movies:
@@ -37,3 +35,6 @@ Blackadder
 My Little Pony
 Shameless (UK TV series)
 The Lone Gunmen
+
+Support title formatting (opt-in): (<b>, <i>, <u>, <s>, <sup>, <sub>)
+	https://en.wikipedia.org/wiki/List_of_The_X-Files_episodes	S03E20

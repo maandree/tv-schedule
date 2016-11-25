@@ -32,7 +32,7 @@ class Parser:
     
     def is_season_section(self, elem):
         return \
-            elem.lower().split(' ')[0] in ('season', 'series') and \
+            elem.lower().split(' ')[0] in ('season', 'series') and ' ' in elem and \
             self.to_num(elem.replace(':', ' ').split(' ')[1])[:1] in '0123456789'
     
     def parse_season(self, elem):
@@ -46,19 +46,25 @@ class Parser:
         if (no_episodes_heading and alt_episodes_heading > 0) or (alt_episodes_heading > 2):
             return []
         in_h2, in_h3, in_tr, in_td = False, False, False, False
-        have_episodes, colspan, ignore = no_episodes_heading, None, None
-        ignore_table = False
+        have_episodes, colspan, ignore = no_episodes_heading, None, []
         rows, columns, text = [], [], ''
         seasons = []
         for elem in page:
             if isinstance(elem, util.Node):
-                if elem.name == 'table':
-                    if elem.type == util.NODE_OPEN:
-                        ignore_table = elem['class'] == 'cquote'
-                    else:
-                        ignore_table = False
-                elif ignore_table:
-                    pass
+                if len(ignore) > 0:
+                    if elem.name == ignore[-1]:
+                        if elem.type == util.NODE_OPEN:
+                            ignore.append(elem.name)
+                        else:
+                            ignore[:] = ignore[:-1]
+                if elem.name == 'div':
+                    cls = elem['class']
+                    if elem.type == util.NODE_OPEN and cls is not None and 'navbox' in cls.split(' '):
+                        ignore.append(elem.name)
+                elif elem.name == 'table':
+                    cls = elem['class']
+                    if elem.type == util.NODE_OPEN and cls is not None and 'cquote' in cls.split(' '):
+                        ignore.append(elem.name)
                 elif not no_episodes_heading and elem.name == 'h2':
                     in_h2 = elem.type == util.NODE_OPEN
                     if in_h2 and have_episodes:
@@ -85,12 +91,12 @@ class Parser:
                 elif elem.name == 'sup':
                     cls = elem['class']
                     if elem.type == util.NODE_OPEN and cls is not None and 'reference' in cls.split(' '):
-                        ignore = 'sup'
+                        ignore.append(elem.name)
                 elif elem.name == 'span':
                     cls = elem['class']
                     if elem.type == util.NODE_OPEN and cls is not None and 'sortkey' in cls.split(' '):
-                        ignore = 'span'
-            elif ignore_table:
+                        ignore.append(elem.name)
+            elif len(ignore) > 0:
                 pass
             elif in_h2:
                 if self.is_episode_section(elem, alt_episodes_heading):
@@ -102,7 +108,7 @@ class Parser:
                 if self.is_season_section(elem):
                     rows = []
                     seasons.append((self.parse_season(elem), rows))
-            elif ignore is None and in_td and have_episodes and colspan in (None, '1'):
+            elif in_td and have_episodes and colspan in (None, '1'):
                 elem = elem.replace('\u200a', '')
                 text += ' ' + elem
         if len(seasons) == 1 and len(seasons[0][1]) == 0:
