@@ -412,6 +412,7 @@ class MythBusters(Parser):
 def parse(show):
     renames = {
         'Two Guys, a Girl and a Pizza Place' : 'Two Guys and a Girl',
+        '$#*! My Dad Says'                   : '$h*! My Dad Says',
     }
     
     if show.startswith('https://') or show.startswith('http://'):
