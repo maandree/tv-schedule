@@ -16,4 +16,6 @@ for f in *; do
     fi
 done > ../list
 
-rm -r diffs
+if test -d diffs; then
+    rm -r diffs
+fi
