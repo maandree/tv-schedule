@@ -5,6 +5,10 @@ class Parser:
     def __init__(self):
         self.MONTHS = ('jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec')
         self.page_parser_flag_count = 4
+        self.last_episode = None
+        self.episode_offset = 0
+        self.postponed_set_episode_offset = False
+        self.previous_season = 1
     
     def is_episode_section(self, elem, alt_episodes_heading):
         if alt_episodes_heading == 0:
@@ -195,6 +199,28 @@ class Parser:
                 title = ' '.join(('%s' if i == 0 else '(A.K.A %s)') % t for i, t in enumerate(title.split('" "')))
         return title.replace('  ', ' ')
     
+    def is_num(self, num):
+        if num[-1] in 'abcdefghijklmnopqrstuvwxyz':
+            num, alpha = num[:-1], num[-1]
+        try:
+            int(num, 10)
+            return True
+        except:
+            return False
+    
+    def cmp_num(self, a_num, b_num):
+        a_alpha, b_alpha = None, None
+        if a_num[-1] in 'abcdefghijklmnopqrstuvwxyz':
+            a_num, a_alpha = a_num[:-1], a_num[-1]
+        if b_num[-1] in 'abcdefghijklmnopqrstuvwxyz':
+            b_num, b_alpha = b_num[:-1], b_num[-1]
+        a_num, b_num = int(a_num), int(b_num)
+        if a_num != b_num:
+            return -1 if a_num < b_num else +1
+        if a_num != b_num:
+            return -1 if a_num < b_num else +1
+        return 0
+    
     def parse_episode(self, episode):
         if '(' in episode: # TODO select the lowest
             episode = episode.split('(')[1].split(')')[0]
@@ -206,8 +232,35 @@ class Parser:
                 continue
             e = self.parse_episode_no(e)
             episodes.append('xx' if e is None else ('%02i%s' % e))
-        if len(episodes) > 1:
+        if len(episodes) == 0:
+            episodes = ['xx']
+        elif len(episodes) > 1:
+            if all(self.is_num(e) for e in episodes):
+                for i in range(1, len(episodes)):
+                    if self.cmp_num(episodes[i], episodes[i - 1]) <= 0:
+                        raise Exception('Episode numbers inside a single episode is out of order')
             episodes = [episodes[0], episodes[-1]] ## See first episode in https://en.wikipedia.org/wiki/List_of_TaleSpin_episodes
+        if self.season != self.previous_season or self.postponed_set_episode_offset:
+            if episodes[0] == 'xx':
+                self.postponed_set_episode_offset = True
+            elif self.last_episode is not None and self.cmp_num(episodes[0], self.last_episode) > 0:
+                self.postponed_set_episode_offset = False
+                num, alpha = episodes[0], ''
+                if num[-1] in 'abcdefghijklmnopqrstuvwxyz':
+                    num, alpha = num[:-1], num[-1]
+                self.episode_offset = int(num, 10) - 1
+        if episodes[-1] != 'xx':
+            self.last_episode = episodes[-1]
+        if self.episode_offset > 0:
+            for i in range(len(episodes)):
+                episode = episodes[i]
+                if episode == 'xx':
+                    continue
+                num, alpha = episode, ''
+                if num[-1] in 'abcdefghijklmnopqrstuvwxyz':
+                    num, alpha = num[:-1], num[-1]
+                episodes[i] = '%02i%s' % (int(num, 10) - self.episode_offset, alpha)
+        self.previous_season = self.season
         return episodes
     
     def simplify_column(self, column):
