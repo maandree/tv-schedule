@@ -408,7 +408,6 @@ class MythBusters(Parser):
     def parse_season(self, elem):
         return int(elem.split(' ')[0], 10) - 2003 + 1
 
-
 def parse(show):
     renames = {
         'Two Guys, a Girl and a Pizza Place' : 'Two Guys and a Girl',
@@ -435,7 +434,7 @@ def parse(show):
         return False
     
     L = lambda a : 'List_of_%s_episodes' % a
-    articles = {
+    quirks = {
         L('Darkwing_Duck')             : Darkwing_Duck,
         'Wacky_Races'                  : Wacky_Races,
         L('Tiny_Toon_Adventures')      : Tiny_Toon_Adventures,
@@ -446,9 +445,9 @@ def parse(show):
     }
     
     parser = None
-    for article in articles:
+    for article in quirks:
         if is_article(article):
-            parser = articles[article]()
+            parser = quirks[article]()
     if parser is None:
         parser = Parser()
     
