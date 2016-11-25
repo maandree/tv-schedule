@@ -41,7 +41,7 @@ class Parser:
         in_h2, in_h3, in_tr, in_td = False, False, False, False
         have_episodes, colspan, ignore = no_episodes_heading, None, None
         ignore_table = False
-        rows, columns, text = [], None, ''
+        rows, columns, text = [], [], ''
         seasons = []
         for elem in page:
             if isinstance(elem, util.Node):
@@ -237,11 +237,12 @@ class Parser:
         return found
     
     def parse(self, urls):
+        flagses = list(range(1 << self.page_parser_flag_count))
         for url in urls:
             page = util.get(url)
             try:
                 page = util.parse_xml(page)
-                for flags in range(1 << self.page_parser_flag_count):
+                for flags in flagses:
                     episodes = self.parse_table(self.parse_page(page, flags))
                     if len(episodes) > 0:
                         return (url, episodes)

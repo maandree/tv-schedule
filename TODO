@@ -1,5 +1,14 @@
 General:
 	overall-only episode number only
+		Baby Looney Tunes -------------- includes a jump due to movie specials
+		Balls of Steel
+		Black Books
+		Darkwing Duck
+		Disney's Adventures of the Gummi Bears
+		Two Guys, a Girl and a Pizza Place
+		Duck Dodgers
+		Psychoville
+		Silent Witness
 	multiple airdate columns and multiple airdates within column
 	multiple “#” or “No.” columns
 
@@ -13,25 +22,12 @@ Requires new parsers:
 	The Wrong Door
 
 Don't know why they do not work:
-	Awake
-	Baby Looney Tunes
-	Balls of Steel
-	Black Books
-	Disney's Adventures of the Gummi Bears
 	Doctor Who ------------------------------ will require quirks
-	Duck Dodgers
 	Heroes
-	Journeyman
 	La Femme Nikita
-	Life on Mars (U.S. TV series)
-	Mr. Bean
 	Ninja Turtles: The Next Mutation
-	Psychoville
-	Seven Days
-	Silent Witness
-	TaleSpin
 
-Does not work because of specials/shorts/webisodes:
+Does not work because of specials/shorts/webisodes/movies:
 	Dexter's Laboratory
 	Friends
 	Sherlock
@@ -48,8 +44,6 @@ Does not have episode numbers:
 	Masters of Science Fiction
 
 Blackadder
-Darkwing Duck
 My Little Pony
 Shameless (UK TV series)
 The Lone Gunmen
-Two Guys, a Girl and a Pizza Place
