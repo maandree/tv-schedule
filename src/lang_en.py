@@ -14,7 +14,7 @@ class Parser:
         if alt_episodes_heading == 0:
             headings = ('episodes', 'episode list', 'episode guide', 'seasons', 'season list')
         elif alt_episodes_heading == 1:
-            headings = ('series overview', 'broadcast and release', 'series')
+            headings = ('series overview', 'broadcast and release', 'series', 'television series', 'television')
         elif alt_episodes_heading == 2:
             headings = ('main series',)
         return elem.lower().replace('listing', 'list') in headings
@@ -178,8 +178,9 @@ class Parser:
             return None # extra
     
     def get_episode_column(self, columns):
-        return util.index_any(columns, 'noinseason', 'noinseries', 'episode', 'ep', 'episodeno',
-                              'releaseorder', 'seasonepno', 'serial', 'no')
+        return util.index_any(columns, 'noinseason', 'noinseries', 'noforseason', 'noforseries', 'episode',
+                              'ep', 'episodeno', 'releaseorder', 'seasonepno', 'serial', 'epno', 'no',
+                              select = lambda l, k : util.all_indices(l, k)[-1])
     
     def get_title_column(self, columns):
         try:
@@ -257,6 +258,7 @@ class Parser:
         return episodes
     
     def parse_episodes(self, episode):
+        episode = episode.replace('*', '')
         for c in '–-/&':
             episode = episode.replace(c, ' ')
         episodes = []
@@ -287,8 +289,9 @@ class Parser:
         return get(episode)
     
     def simplify_column(self, column):
-        column = column.replace('#', 'no').lower().replace('º', 'o').replace('.', '')
-        ignored = ('original', 'us', 'uk')
+        column = column.replace('#', 'no').lower().replace('º', 'o').replace('.', '').replace('-', '')
+        column = column.split('(')[0]
+        ignored = ('original', 'us', 'uk', 'canadian')
         def sub(w):
             w = w.replace('name', 'title')
             w = w.replace('number', 'no')
@@ -305,8 +308,13 @@ class Parser:
             col_episode = self.get_episode_column(columns)
             col_title = self.get_title_column(columns)
             col_date = self.get_date_column(columns)
+            episode_no = 0
             for cols in episodes:
-                episode = '-'.join(self.parse_episode(cols[col_episode]))
+                if col_episode is None: # Requires self.get_episode_column quirk
+                    episode_no += 1
+                    episode = '%02i' % episode_no
+                else:
+                    episode = '-'.join(self.parse_episode(cols[col_episode]))
                 title = self.parse_title(cols[col_title]) if col_title is not None else None
                 date = self.parse_date(cols[col_date])
                 if title is not None:
@@ -342,8 +350,6 @@ class Darkwing_Duck(Parser):
         return self.seasons.index(elem.lower().split('(')[0].strip()) + 1
 
 class Wacky_Races(Parser):
-    def __init__(self):
-        Parser.__init__(self)
     def parse_episode(self, episode):
         if episode.startswith('WR-'):
             episode = episode[3:]
@@ -363,6 +369,45 @@ class Tiny_Toon_Adventures(Parser):
         if self.modify_episode:
             episode = episode.split('-')[1]
         return Parser.parse_episode(self, episode)
+
+class Masters_of_Science_Fiction(Parser):
+    def get_episode_column(self, columns):
+        try:
+            return Parser.get_episode_column(self, columns)
+        except:
+            return None
+
+class Aladdin(Parser):
+    def __init__(self):
+        Parser.__init__(self)
+        self.seasons = ['disney afternoon season 1', 'cbs season 1', 'cbs season 2']
+    def is_season_section(self, elem):
+        return elem.lower().split('(')[0].strip() in self.seasons
+    def parse_season(self, elem):
+        return self.seasons.index(elem.lower().split('(')[0].strip()) + 1
+
+class Goof_Troop(Parser):
+    def __init__(self):
+        Parser.__init__(self)
+        self.seasons = ['disney afternoon', 'abc']
+    def is_season_section(self, elem):
+        return elem.lower().split('(')[0].strip() in self.seasons
+    def parse_season(self, elem):
+        return self.seasons.index(elem.lower().split('(')[0].strip()) + 1
+
+class MythBusters(Parser):
+    def is_season_section(self, elem):
+        words = elem.lower().split(' ')
+        if len(words) != 2 or words[1] != 'season' or len(words[0]) != 4:
+            return False
+        try:
+            year = int(words[0], 10)
+            return 2003 <= year
+        except:
+            return False
+    def parse_season(self, elem):
+        return int(elem.split(' ')[0], 10) - 2003 + 1
+
 
 def parse(show):
     renames = {
@@ -388,10 +433,15 @@ def parse(show):
                 return True
         return False
     
+    L = lambda a : 'List_of_%s_episodes' % a
     articles = {
-        'List_of_Darkwing_Duck_episodes'        : Darkwing_Duck,
-        'Wacky_Races'                           : Wacky_Races,
-        'List_of_Tiny_Toon_Adventures_episodes' : Tiny_Toon_Adventures
+        L('Darkwing_Duck')             : Darkwing_Duck,
+        'Wacky_Races'                  : Wacky_Races,
+        L('Tiny_Toon_Adventures')      : Tiny_Toon_Adventures,
+        ('Masters_of_Science_Fiction') : Masters_of_Science_Fiction,
+        L('Aladdin')                   : Aladdin,
+        L('Goof_Troop')                : Goof_Troop,
+        L('MythBusters')               : MythBusters,
     }
     
     parser = None

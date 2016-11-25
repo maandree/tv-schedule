@@ -3,6 +3,7 @@ General:
 
 Requires new parsers:
 	A Bit of Fry & Laurie
+	Dead Set
 	Into the Universe with Stephen Hawking
 	Quark
 	The Adventures of Tintin
@@ -11,13 +12,18 @@ Requires new parsers:
 	The Wrong Door
 
 Don't know why they do not work:
+	Charlie Brooker's Screenwipe
+	Cheers
 	Doctor Who ------------------------------ will require quirks
-	Naruto: Shippuden
+	Doctor Who: The Adventure Games
 	Panty & Stocking with Garterbelt -------- will require quirks
+	Sanctuary
+	Stargate SG-1
 
 Does not work because of specials/shorts/webisodes/movies:
 	Dexter's Laboratory
 	Friends
+	MythBusters
 	Sherlock
 	Teenage Mutant Ninja Turtles (2003 TV series)
 	The Shield
@@ -27,14 +33,17 @@ Each season have their own article:
 
 Text extraction must be improved:
 	Lost Worlds
-
-Does not have episode numbers:
-	Masters of Science Fiction
+	Naked Science
+	Star Trek: Deep Space Nine
+	Star Trek: Enterprise
+	Star Trek: Voyager
 
 Blackadder
+Grownups (2006 TV series)
 My Little Pony
 Shameless (UK TV series)
 The Lone Gunmen
+Who's The Boss?
 
 Support title formatting (opt-in): (<b>, <i>, <u>, <s>, <sup>, <sub>)
 	https://en.wikipedia.org/wiki/List_of_The_X-Files_episodes	S03E20

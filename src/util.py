@@ -15,7 +15,7 @@ def all_indices(list, key):
 
 def index_any(list, *keys, select = None):
     if select is None:
-        select = lambda l, k : all_indices(list, key)[-1]
+        select = lambda l, k : l.index(k)
     for key in keys:
         if key in list:
             return select(list, key)
