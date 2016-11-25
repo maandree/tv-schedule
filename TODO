@@ -1,6 +1,5 @@
 General:
 	multiple airdate columns and multiple airdates within column
-	multiple “#” or “No.” columns
 
 Requires new parsers:
 	A Bit of Fry & Laurie

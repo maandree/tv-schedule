@@ -208,7 +208,7 @@ class Parser:
         except:
             return False
     
-    def cmp_num(self, a_num, b_num):
+    def cmp_num(self, a_num, b_num, if_a_alpha_is_none = None):
         a_alpha, b_alpha = None, None
         if a_num[-1] in 'abcdefghijklmnopqrstuvwxyz':
             a_num, a_alpha = a_num[:-1], a_num[-1]
@@ -216,30 +216,17 @@ class Parser:
             b_num, b_alpha = b_num[:-1], b_num[-1]
         a_num, b_num = int(a_num), int(b_num)
         if a_num != b_num:
-            return -1 if a_num < b_num else +1 
+            return -1 if a_num < b_num else +1
+        if if_a_alpha_is_none is not None:
+            if a_alpha is None and b_alpha is not None:
+                return +if_a_alpha_is_none
+            elif a_alpha is None and b_alpha is not None:
+                return -if_a_alpha_is_none
         if a_alpha != b_alpha:
             return -1 if a_alpha < b_alpha else +1
         return 0
     
-    def parse_episode(self, episode):
-        if '(' in episode: # TODO select the lowest
-            episode = episode.split('(')[1].split(')')[0]
-        for c in '–-/&':
-            episode = episode.replace(c, ' ')
-        episodes = []
-        for e in episode.split(' '):
-            if e == '':
-                continue
-            e = self.parse_episode_no(e)
-            episodes.append('xx' if e is None else ('%02i%s' % e))
-        if len(episodes) == 0:
-            episodes = ['xx']
-        elif len(episodes) > 1:
-            if all(self.is_num(e) for e in episodes):
-                for i in range(1, len(episodes)):
-                    if self.cmp_num(episodes[i], episodes[i - 1]) <= 0:
-                        raise Exception('Episode numbers inside a single episode is out of order')
-            episodes = [episodes[0], episodes[-1]] ## See first episode in https://en.wikipedia.org/wiki/List_of_TaleSpin_episodes
+    def get_in_season_episodes(self, episodes):
         if self.season != self.previous_season or self.postponed_set_episode_offset:
             if episodes[0] == 'xx':
                 self.postponed_set_episode_offset = True
@@ -262,6 +249,36 @@ class Parser:
                 episodes[i] = '%02i%s' % (int(num, 10) - self.episode_offset, alpha)
         self.previous_season = self.season
         return episodes
+    
+    def parse_episodes(self, episode):
+        for c in '–-/&':
+            episode = episode.replace(c, ' ')
+        episodes = []
+        for e in episode.split(' '):
+            if e == '':
+                continue
+            e = self.parse_episode_no(e)
+            episodes.append('xx' if e is None else ('%02i%s' % e))
+        if len(episodes) == 0:
+            episodes = ['xx']
+        elif len(episodes) > 1:
+            if all(self.is_num(e) for e in episodes):
+                for i in range(1, len(episodes)):
+                    if self.cmp_num(episodes[i], episodes[i - 1]) <= 0:
+                        raise Exception('Episode numbers inside a single episode is out of order')
+            episodes = [episodes[0], episodes[-1]] ## See first episode in https://en.wikipedia.org/wiki/List_of_TaleSpin_episodes
+        return episodes
+    
+    def parse_episode(self, episode):
+        get = lambda e : self.get_in_season_episodes(self.parse_episodes(e))
+        if '(' in episode:
+            alt1 = episode.split('(')[0].strip()
+            alt2 = episode.split('(')[1].split(')')[0].strip()
+            try:
+                return get(alt1 if self.cmp_num(alt1, alt2, +1) < 0 else alt2)
+            except:
+                episode = alt2
+        return get(episode)
     
     def simplify_column(self, column):
         column = column.replace('#', 'no').lower().replace('º', 'o').replace('.', '')

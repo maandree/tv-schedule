@@ -6,11 +6,20 @@ NODE_OPEN = 0
 NODE_SELF_CLOSING = 1
 NODE_CLOSE = 2
 
-def index_any(list, *keys):
+def all_indices(list, key):
+    ret = []
+    for i, e in enumerate(list):
+        if e == key:
+            ret.append(i)
+    return ret
+
+def index_any(list, *keys, select = None):
+    if select is None:
+        select = lambda l, k : all_indices(list, key)[-1]
     for key in keys:
         if key in list:
-            return list.index(key)
-    return list.index(keys[0])
+            return select(list, key)
+    raise Exception('no match found')
 
 def get(url):
     proc = Popen(['curl', url], stdout = PIPE, stderr = sys.stderr)
