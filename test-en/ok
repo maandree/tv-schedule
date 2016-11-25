@@ -15,3 +15,5 @@ for f in *; do
 	printf '%s\n' "$f"
     fi
 done > ../list
+
+rm -r diffs

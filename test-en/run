@@ -3,16 +3,19 @@
 WIKI_LANG=en
 
 cd -- "$(dirname -- "$0")"
-mkdir -p old new
+mkdir -p old new diffs
 
 cat list | grep -v '^$' | while read f; do
-    touch -- "old/$f"
+    touch "old/$f"
 done
 
 ls -1 old | grep -v '~$' | while read f; do
     if ! test -x "$f"; then
 	../src/__main__.py -l "${WIKI_LANG}" -- "$f" > "new/$f"
-	diff -U0 -- "old/$f" "new/$f"
+	diff -U0 "old/$f" "new/$f" | tee "diffs/$f"
+	if ! test -s "diffs/$f"; then
+	    rm "diffs/$f"
+	fi
     fi
 done
 true
