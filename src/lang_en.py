@@ -216,9 +216,9 @@ class Parser:
             b_num, b_alpha = b_num[:-1], b_num[-1]
         a_num, b_num = int(a_num), int(b_num)
         if a_num != b_num:
-            return -1 if a_num < b_num else +1
-        if a_num != b_num:
-            return -1 if a_num < b_num else +1
+            return -1 if a_num < b_num else +1 
+        if a_alpha != b_alpha:
+            return -1 if a_alpha < b_alpha else +1
         return 0
     
     def parse_episode(self, episode):
