@@ -3,7 +3,7 @@
 WIKI_LANG=en
 
 cd -- "$(dirname -- "$0")"
-mkdir -p old new diffs
+mkdir -p old new diffs cache
 
 cat list | grep -v '^$' | while read f; do
     touch "old/$f"
@@ -11,7 +11,7 @@ done
 
 ls -1 old | grep -v '~$' | while read f; do
     if ! test -x "$f"; then
-	../src/__main__.py -l "${WIKI_LANG}" -- "$f" > "new/$f"
+	../src/__main__.py -C cache -l "${WIKI_LANG}" -- "$f" > "new/$f"
 	diff -U0 "old/$f" "new/$f" | tee "diffs/$f"
 	if ! test -s "diffs/$f"; then
 	    rm "diffs/$f"

@@ -16,6 +16,9 @@ for f in *; do
     fi
 done > ../list
 
+cd ..
+rmdir new
+
 if test -d diffs; then
     rm -r diffs
 fi

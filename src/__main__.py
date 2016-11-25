@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
+import util
 
 def usage():
     print('Usage: %s [-l langcode] (<show> | <url>)' % sys.argv[0], file = sys.stderr)
@@ -32,6 +33,8 @@ while i < n:
     while j < m:
         if arg[j] == 'l':
             lang = getarg()
+        elif arg[j] == 'C': ## Undocumented, for development
+            util.cache = getarg()
         else:
             usage()
         j += 1

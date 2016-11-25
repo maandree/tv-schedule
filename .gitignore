@@ -1,6 +1,7 @@
 /test-*/old/
 /test-*/new/
 /test-*/diffs/
+/test-*/cache/
 bin/
 __pycache__/
 .\#*

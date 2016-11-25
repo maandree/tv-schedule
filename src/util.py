@@ -1,10 +1,12 @@
-import sys
+import os, sys
 # import pyexpat does not work, it is too strict
 from subprocess import Popen, PIPE
 
 NODE_OPEN = 0
 NODE_SELF_CLOSING = 1
 NODE_CLOSE = 2
+
+cache = None
 
 def all_indices(list, key):
     ret = []
@@ -22,9 +24,27 @@ def index_any(list, *keys, select = None):
     raise Exception('no match found')
 
 def get(url):
+    cachefile = None
+    if cache is not None:
+        cachefile = cache + '/' + '%2F'.join(url.split('/')[4:])
+        try:
+            with open(cachefile, 'rb') as file:
+                out = file.read()
+            return out.decode('utf-8', 'replace')
+        except:
+            pass
     proc = Popen(['curl', url], stdout = PIPE, stderr = sys.stderr)
     out = proc.communicate()[0]
-    return out.decode('utf-8', 'replace') if proc.returncode == 0 else None
+    if proc.returncode != 0:
+        return None
+    if cachefile is not None:
+        try:
+            with open(cachefile, 'wb') as file:
+                file.write(out)
+                file.flush()
+        except:
+            pass
+    return out.decode('utf-8', 'replace')
 
 class Node:
     def __init__(self, name, attrs, type):
