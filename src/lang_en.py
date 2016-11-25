@@ -244,7 +244,7 @@ class Parser:
                 for flags in range(1 << self.page_parser_flag_count):
                     episodes = self.parse_table(self.parse_page(page, flags))
                     if len(episodes) > 0:
-                        return episodes
+                        return (url, episodes)
             except:
                 pass
         return None
@@ -318,10 +318,4 @@ def parse(show):
     if parser is None:
         parser = Parser()
     
-    episodes = parser.parse(urls)
-    if episodes is None:
-        print('%s: don\'t know how to parse' % sys.argv[0], file = sys.stderr)
-        sys.exit(1)
-    else:
-        for episode in episodes:
-            print(episode)
+    return parser.parse(urls)

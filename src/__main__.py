@@ -48,7 +48,16 @@ if lang is None:
 
 if lang == 'en':
     import lang_en
-    lang_en.parse(show)
+    r = lang_en.parse(show)
 else:
     print('%s: unsupported language: %s' % (sys.argv[0], lang), file = sys.stderr)
     sys.exit(1)
+
+if r is None:
+    print('%s: don\'t know how to parse' % sys.argv[0], file = sys.stderr)
+    sys.exit(1)
+else:
+    (url, episodes) = r
+    print(url)
+    for episode in episodes:
+        print(episode)
