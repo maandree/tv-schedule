@@ -1,7 +1,12 @@
+/test-*/old/
+/test-*/new/
 bin/
 __pycache__/
 .\#*
 \#*\#
 *~
+*.bak
+*.swo
+*.swp
 *.pyo
 *.pyc

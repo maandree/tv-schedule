@@ -1,0 +1,17 @@
+#!/bin/sh
+
+cd -- "$(dirname -- "$0")"
+mkdir -p old
+
+for f in new/*; do
+    if test -f "$f" && ! test -x "$f"; then
+	mv -- "$f" "old/$(echo "$f" | cut -d / -f 2-)"
+    fi
+done
+
+cd old
+for f in *; do
+    if test -f "$f" && ! test -x "$f"; then
+	printf '%s\n' "$f"
+    fi
+done > ../list
