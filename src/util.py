@@ -233,14 +233,14 @@ def parse_xml(text, with_nbsp = False):
                     elif quote == c:
                         quote = None
         elif c == '<':
-            buf = p(buf, True)
+            buf = p(buf, False)
             if not buf == '':
                 ret.append(buf)
             lt, buf, cdata = True, '', '![CDATA['
         else:
             buf += c
     if not lt:
-        buf = p(buf, True)
+        buf = p(buf, False)
         if not buf == '':
             ret.append(buf)
     ret_ = ret

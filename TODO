@@ -11,9 +11,6 @@ Requires new parsers:
 	The Newsroom (Canadian TV series)
 	The Wrong Door
 
-Requires quirks:
-	Panty & Stocking with Garterbelt
-
 Don't know why they do not work:
 	Doctor Who ------------------------------ will require quirks
 	Stargate SG-1
@@ -24,17 +21,15 @@ Does not work because of specials/shorts/webisodes/movies:
 Each season have their own article:
 	Green Wing
 
-Text extraction must be improved:
-	Lost Worlds
-	Naked Science
-	Star Trek: Deep Space Nine
-	Star Trek: Enterprise
-	Star Trek: Voyager
+Regression at improved text extraction:
+	https://en.wikipedia.org/wiki/List_of_The_Cape_episodes
+	https://en.wikipedia.org/wiki/List_of_Tiny_Toon_Adventures_episodes
 
 American Chopper
 Blackadder
 Grownups (2006 TV series)
 My Little Pony
+Panty & Stocking with Garterbelt
 The Lone Gunmen
 Who's The Boss?
 

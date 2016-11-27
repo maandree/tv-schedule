@@ -40,6 +40,16 @@ class Parser:
     def parse_season(self, elem):
         return int(self.to_num(elem.replace(':', ' ').split(' ')[1]), 10)
     
+    def trim(self, text):
+        text = text.replace('\t', ' ').replace('\n', ' ').replace('\r', ' ').replace('\f', ' ')
+        while '  ' in text:
+            text = text.replace('  ', ' ')
+        if text.startswith(' '):
+            text = text[1:]
+        if text.endswith(' '):
+            text = text[:-1]
+        return text
+    
     def parse_page(self, page, flags = 0):
         single_season         = (flags & 1) != 0
         no_episodes_heading   = (flags & 2) != 0
@@ -87,7 +97,7 @@ class Parser:
                         colspan = elem['colspan']
                         text = ''
                     else:
-                        columns.append(text[1:])
+                        columns.append(text)
                 elif elem.name == ignore:
                     ignore = None
                 elif elem.name == 'sup':
@@ -98,6 +108,9 @@ class Parser:
                     cls = elem['class']
                     if elem.type == util.NODE_OPEN and cls is not None and 'sortkey' in cls.split(' '):
                         ignore.append(elem.name)
+                elif elem.name in ('br', 'hr'):
+                    if in_td and have_episodes and colspan in (None, '1'):
+                        text += '\n'
             elif len(ignore) > 0:
                 pass
             elif in_h2:
@@ -111,8 +124,7 @@ class Parser:
                     rows = []
                     seasons.append((self.parse_season(elem), rows))
             elif in_td and have_episodes and colspan in (None, '1'):
-                elem = elem.replace('\u200a', '')
-                text += ' ' + elem
+                text += elem.replace('\u200a', '')
         if len(seasons) == 1 and len(seasons[0][1]) == 0:
             return []
         return seasons
@@ -306,7 +318,7 @@ class Parser:
         for self.season, episodes in seasons:
             if len(episodes) == 0:
                 continue
-            columns, episodes = [self.simplify_column(t) for t in episodes[0]], episodes[1:]
+            columns, episodes = [self.simplify_column(self.trim(t)) for t in episodes[0]], episodes[1:]
             col_episode = self.get_episode_column(columns)
             col_title = self.get_title_column(columns)
             col_date = self.get_date_column(columns)
@@ -323,9 +335,9 @@ class Parser:
                     episode_no += 1
                     episode = '%02i' % episode_no
                 else:
-                    episode = '-'.join(self.parse_episode(cols[col_episode]))
-                title = self.parse_title(cols[col_title]) if col_title is not None else None
-                date = self.parse_date(cols[col_date])
+                    episode = '-'.join(self.parse_episode(self.trim(cols[col_episode])))
+                title = self.parse_title(self.trim(cols[col_title])) if col_title is not None else None
+                date = self.parse_date(self.trim(cols[col_date]))
                 if title is not None:
                     found.append('%s\tS%02iE%s - %s' % (date, self.season, episode, title))
                 else:
