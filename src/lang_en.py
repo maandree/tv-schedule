@@ -14,8 +14,10 @@ class Parser:
         if alt_episodes_heading == 0:
             headings = ('episodes', 'episode list', 'episode guide', 'seasons', 'season list')
         elif alt_episodes_heading == 1:
-            headings = ('series overview', 'broadcast and release', 'series', 'television series', 'television')
+            headings = ('series overview', 'broadcast and release', 'series', 'television series')
         elif alt_episodes_heading == 2:
+            headings = ('television',)
+        elif alt_episodes_heading == 3:
             headings = ('main series',)
         return elem.lower().replace('listing', 'list') in headings
     
@@ -43,7 +45,7 @@ class Parser:
         no_episodes_heading   = (flags & 2) != 0
         alt_episodes_heading  = (flags & 4) >> 2
         alt_episodes_heading |= (flags & 8) >> 2
-        if (no_episodes_heading and alt_episodes_heading > 0) or (alt_episodes_heading > 2):
+        if (no_episodes_heading and alt_episodes_heading > 0) or (alt_episodes_heading > 3):
             return []
         in_h2, in_h3, in_tr, in_td = False, False, False, False
         have_episodes, colspan, ignore = no_episodes_heading, None, []
@@ -57,7 +59,7 @@ class Parser:
                             ignore.append(elem.name)
                         else:
                             ignore[:] = ignore[:-1]
-                if elem.name == 'div':
+                elif elem.name == 'div':
                     cls = elem['class']
                     if elem.type == util.NODE_OPEN and cls is not None and 'navbox' in cls.split(' '):
                         ignore.append(elem.name)
