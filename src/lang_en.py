@@ -86,7 +86,7 @@ class Parser:
                     if in_td:
                         colspan = elem['colspan']
                         text = ''
-                    elif len(text) > 0:
+                    else:
                         columns.append(text[1:])
                 elif elem.name == ignore:
                     ignore = None
@@ -107,7 +107,7 @@ class Parser:
                         rows = []
                         seasons.append((1, rows))
             elif in_h3:
-                if self.is_season_section(elem):
+                if have_episodes and self.is_season_section(elem):
                     rows = []
                     seasons.append((self.parse_season(elem), rows))
             elif in_td and have_episodes and colspan in (None, '1'):
@@ -312,6 +312,8 @@ class Parser:
             col_date = self.get_date_column(columns)
             episode_no = 0
             for cols in episodes:
+                if len(cols) != len(columns):
+                    continue
                 if col_episode is None: # Requires self.get_episode_column quirk
                     episode_no += 1
                     episode = '%02i' % episode_no
