@@ -15,12 +15,18 @@ def all_indices(list, key):
             ret.append(i)
     return ret
 
-def index_any(list, *keys, select = None):
-    if select is None:
-        select = lambda l, k : l.index(k)
+def sub_or_none(list, sub):
+    return None if len(list) == 0 else list[sub]
+
+def index_any(list, *keys, select = None, blacklist = []):
+    if select is None or isinstance(select, int):
+        num = 0 if select is None else select
+        select = lambda l, k : sub_or_none([i for i in all_indices(l, k) if i not in blacklist], num)
     for key in keys:
         if key in list:
-            return select(list, key)
+            r = select(list, key)
+            if r is not None:
+                return r
     raise Exception('no match found')
 
 def get(url):

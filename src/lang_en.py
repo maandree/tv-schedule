@@ -179,14 +179,14 @@ class Parser:
         except: # See https://en.wikipedia.org/wiki/List_of_Everybody_Loves_Raymond_episodes between S06E20 and S06E21
             return None # extra
     
-    def get_episode_column(self, columns):
+    def get_episode_column(self, columns, blacklist = []):
         return util.index_any(columns, 'noinseason', 'noinseries', 'noforseason', 'noforseries', 'episode',
                               'ep', 'episodeno', 'releaseorder', 'seasonepno', 'serial', 'epno', 'no',
-                              select = lambda l, k : util.all_indices(l, k)[-1])
+                              select = -1, blacklist = blacklist)
     
     def get_title_column(self, columns):
         try:
-            return util.index_any(columns, 'title', 'episodetitle', 'eptitle', 'cartoons')
+            return util.index_any(columns, 'title', 'episodetitle', 'eptitle', 'cartoons', 'episode')
         except:
             return None
     
@@ -310,6 +310,11 @@ class Parser:
             col_episode = self.get_episode_column(columns)
             col_title = self.get_title_column(columns)
             col_date = self.get_date_column(columns)
+            if col_episode == col_title:
+                try:
+                    col_episode = self.get_episode_column(columns, [col_title])
+                except:
+                    col_title = None
             episode_no = 0
             for cols in episodes:
                 if len(cols) != len(columns):
@@ -375,9 +380,9 @@ class Tiny_Toon_Adventures(Parser):
         return Parser.parse_episode(self, episode)
 
 class Masters_of_Science_Fiction(Parser):
-    def get_episode_column(self, columns):
+    def get_episode_column(self, columns, blacklist = []):
         try:
-            return Parser.get_episode_column(self, columns)
+            return Parser.get_episode_column(self, columns, blacklist)
         except:
             return None
 
