@@ -157,9 +157,8 @@ class Parser:
         d = '..' if d is None else ('%02i' % d)
         return '%s-%s-%s' % (y, m, d)
     
-    def parse_date(self, date):
-        if '( ' in date:
-            date = date.split('( ')[1].split(' )')[0].strip()
+    def parse_single(self, date):
+        if '-' in date:
             date = date.split('T')[0] # See https://en.wikipedia.org/wiki/List_of_Shameless_(UK_TV_series)_episodes S10E09
         elif '.' in date:
             date = date.split('.')
@@ -172,6 +171,20 @@ class Parser:
         else:
             date = '-'.join((date + '-..-..').split('-')[:3])
         return date
+    
+    def parse_date(self, date):
+        dates = [d.strip() for d in date.replace(')', '(').split('(')]
+        ret = []
+        for date in dates:
+            try:
+                if date.startswith('-'):
+                    date = date[1:].lstrip()
+                if date.endswith('-'):
+                    date = date[:-1].rstrip()
+                ret.append(self.parse_single(date))
+            except:
+                pass
+        return sorted(ret, key = lambda d : d.replace('.', 'z'))[0]
     
     def parse_episode_no(self, num):
         try:
